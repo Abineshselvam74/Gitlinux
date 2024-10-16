@@ -1,0 +1,53 @@
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.ec2.model.RunInstancesRequest;
+import software.amazon.awssdk.services.ec2.model.RunInstancesResponse;
+import software.amazon.awssdk.services.ec2.model.Tag;
+import software.amazon.awssdk.services.ec2.model.TagSpecification;
+import software.amazon.awssdk.services.ec2.model.InstanceType;
+import software.amazon.awssdk.services.ec2.model.CreateTagsRequest;
+import software.amazon.awssdk.services.ec2.model.Ec2Exception;
+
+public class CreateEC2Instance {
+
+    public static void main(String[] args) {
+        Region region = Region.AP_SOUTH_1; // Specify the AP South (Mumbai) region
+        Ec2Client ec2 = Ec2Client.builder()
+                .region(region)
+                .credentialsProvider(ProfileCredentialsProvider.create())
+                .build();
+
+        String amiId = "ami-1234567890abcdef0"; // Replace with a valid AMI ID for your region
+        String keyPairName = "linpkk"; // Name of your .ppk key pair without extension
+
+        try {
+            // Create an EC2 instance with the specified key pair
+            RunInstancesRequest runRequest = RunInstancesRequest.builder()
+                    .imageId(amiId)
+                    .instanceType(InstanceType.T2_MICRO)
+                    .keyName(keyPairName)
+                    .maxCount(1)
+                    .minCount(1)
+                    .tagSpecifications(TagSpecification.builder()
+                            .resourceType("instance")
+                            .tags(Tag.builder()
+                                    .key("Name")
+                                    .value("Git Server")
+                                    .build())
+                            .build())
+                    .build();
+
+            RunInstancesResponse response = ec2.runInstances(runRequest);
+
+            String instanceId = response.instances().get(0).instanceId();
+            System.out.printf("EC2 instance created with ID: %s%n", instanceId);
+
+        } catch (Ec2Exception e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+
+        ec2.close();
+    }
+}
